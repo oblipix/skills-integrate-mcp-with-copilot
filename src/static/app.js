@@ -1,30 +1,72 @@
+
 document.addEventListener("DOMContentLoaded", () => {
   const activitiesList = document.getElementById("activities-list");
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
+  const filterCategory = document.getElementById("filter-category");
+  const filterName = document.getElementById("filter-name");
+  const filterSearch = document.getElementById("filter-search");
+  let allActivities = {};
 
   // Function to fetch activities from API
   async function fetchActivities() {
     try {
       const response = await fetch("/activities");
       const activities = await response.json();
+      allActivities = activities;
+      populateFilters(activities);
+      renderActivities();
+    } catch (error) {
+      activitiesList.innerHTML =
+        "<p>Failed to load activities. Please try again later.</p>";
+      console.error("Error fetching activities:", error);
+    }
+  }
 
-      // Clear loading message
-      activitiesList.innerHTML = "";
+  function populateFilters(activities) {
+    // Populate category filter
+    const categories = Array.from(new Set(Object.values(activities).map(a => a.category || "Other")));
+    filterCategory.innerHTML = '<option value="">All</option>' + categories.map(cat => `<option value="${cat}">${cat}</option>`).join("");
 
-      // Populate activities list
-      Object.entries(activities).forEach(([name, details]) => {
-        const activityCard = document.createElement("div");
-        activityCard.className = "activity-card";
+    // Populate name filter
+    const names = Object.keys(activities);
+    filterName.innerHTML = '<option value="">All</option>' + names.map(name => `<option value="${name}">${name}</option>`).join("");
+  }
 
-        const spotsLeft =
-          details.max_participants - details.participants.length;
+  function renderActivities() {
+    // Get filter values
+    const selectedCategory = filterCategory ? filterCategory.value : "";
+    const selectedName = filterName ? filterName.value : "";
+    const searchText = filterSearch ? filterSearch.value.trim().toLowerCase() : "";
 
-        // Create participants HTML with delete icons instead of bullet points
-        const participantsHTML =
-          details.participants.length > 0
-            ? `<div class="participants-section">
+    // Filter activities
+    let filtered = Object.entries(allActivities);
+    if (selectedCategory) {
+      filtered = filtered.filter(([_, details]) => (details.category || "Other") === selectedCategory);
+    }
+    if (selectedName) {
+      filtered = filtered.filter(([name, _]) => name === selectedName);
+    }
+    if (searchText) {
+      filtered = filtered.filter(([name, details]) =>
+        name.toLowerCase().includes(searchText) ||
+        (details.description && details.description.toLowerCase().includes(searchText)) ||
+        (details.schedule && details.schedule.toLowerCase().includes(searchText))
+      );
+    }
+
+    // Clear and render
+    activitiesList.innerHTML = "";
+    activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
+
+    filtered.forEach(([name, details]) => {
+      const activityCard = document.createElement("div");
+      activityCard.className = "activity-card";
+      const spotsLeft = details.max_participants - details.participants.length;
+      const participantsHTML =
+        details.participants.length > 0
+          ? `<div class="participants-section">
               <h5>Participants:</h5>
               <ul class="participants-list">
                 ${details.participants
@@ -35,36 +77,31 @@ document.addEventListener("DOMContentLoaded", () => {
                   .join("")}
               </ul>
             </div>`
-            : `<p><em>No participants yet</em></p>`;
+          : `<p><em>No participants yet</em></p>`;
 
-        activityCard.innerHTML = `
-          <h4>${name}</h4>
-          <p>${details.description}</p>
-          <p><strong>Schedule:</strong> ${details.schedule}</p>
-          <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
-          <div class="participants-container">
-            ${participantsHTML}
-          </div>
-        `;
+      activityCard.innerHTML = `
+        <h4>${name}</h4>
+        <p><strong>Category:</strong> ${details.category || "Other"}</p>
+        <p>${details.description}</p>
+        <p><strong>Schedule:</strong> ${details.schedule}</p>
+        <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+        <div class="participants-container">
+          ${participantsHTML}
+        </div>
+      `;
+      activitiesList.appendChild(activityCard);
 
-        activitiesList.appendChild(activityCard);
+      // Add option to select dropdown
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      activitySelect.appendChild(option);
+    });
 
-        // Add option to select dropdown
-        const option = document.createElement("option");
-        option.value = name;
-        option.textContent = name;
-        activitySelect.appendChild(option);
-      });
-
-      // Add event listeners to delete buttons
-      document.querySelectorAll(".delete-btn").forEach((button) => {
-        button.addEventListener("click", handleUnregister);
-      });
-    } catch (error) {
-      activitiesList.innerHTML =
-        "<p>Failed to load activities. Please try again later.</p>";
-      console.error("Error fetching activities:", error);
-    }
+    // Add event listeners to delete buttons
+    document.querySelectorAll(".delete-btn").forEach((button) => {
+      button.addEventListener("click", handleUnregister);
+    });
   }
 
   // Handle unregister functionality
@@ -154,6 +191,11 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Error signing up:", error);
     }
   });
+
+  // Filter event listeners
+  if (filterCategory) filterCategory.addEventListener("change", renderActivities);
+  if (filterName) filterName.addEventListener("change", renderActivities);
+  if (filterSearch) filterSearch.addEventListener("input", renderActivities);
 
   // Initialize app
   fetchActivities();
