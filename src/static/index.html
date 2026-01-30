@@ -13,8 +13,23 @@
     </header>
 
     <main>
+
       <section id="activities-container">
         <h3>Available Activities</h3>
+        <div id="activity-filters" class="form-group" style="margin-bottom: 20px;">
+          <label for="filter-category">Category:</label>
+          <select id="filter-category">
+            <option value="">All</option>
+            <!-- Categories will be loaded here -->
+          </select>
+          <label for="filter-name" style="margin-left: 15px;">Name:</label>
+          <select id="filter-name">
+            <option value="">All</option>
+            <!-- Names will be loaded here -->
+          </select>
+          <label for="filter-search" style="margin-left: 15px;">Search:</label>
+          <input type="text" id="filter-search" placeholder="Search activities..." style="width: 180px;" />
+        </div>
         <div id="activities-list">
           <!-- Activities will be loaded here -->
           <p>Loading activities...</p>
